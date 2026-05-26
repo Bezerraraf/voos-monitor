@@ -1,0 +1,24 @@
+name: Buscar Preços de Voos
+
+on:
+  schedule:
+    # Roda a cada 6 horas
+    - cron: '0 */6 * * *'
+  workflow_dispatch: # permite rodar manualmente
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Buscar e salvar preços
+        env:
+          TRAVELPAYOUTS_TOKEN: ${{ secrets.TRAVELPAYOUTS_TOKEN }}
+          SUPABASE_URL: https://lvjkilmgrxbrwrnrqvvw.supabase.co
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: node scripts/fetch-prices.js
