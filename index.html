@@ -1,0 +1,1230 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VooRadar — Monitor da Família</title>
+  <style>
+    :root {
+      --bg:#0f1117; --surface:#1a1d27; --surface2:#22263a; --surface3:#2a2f47;
+      --border:#2e3350; --accent:#4f6ef7; --accent2:#7c3aed;
+      --green:#22c55e; --yellow:#f59e0b; --red:#ef4444;
+      --text:#e2e8f0; --muted:#64748b; --hover:#252944;
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh}
+
+    /* ── LOGIN ── */
+    #login-screen{position:fixed;inset:0;background:var(--bg);z-index:999;display:flex;align-items:center;justify-content:center}
+    .login-box{background:var(--surface);border:1px solid var(--border);border-radius:24px;padding:2.5rem;text-align:center;max-width:360px;width:90%}
+    .login-logo{font-size:3rem;margin-bottom:1rem}
+    .login-title{font-size:1.5rem;font-weight:700;background:linear-gradient(90deg,#4f6ef7,#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:.4rem}
+    .login-sub{font-size:.8rem;color:var(--muted);margin-bottom:2rem}
+    .pin-inputs{display:flex;gap:.8rem;justify-content:center;margin-bottom:1.5rem}
+    .pin-input{width:52px;height:60px;border-radius:12px;border:2px solid var(--border);background:var(--surface2);color:var(--text);font-size:1.6rem;font-weight:700;text-align:center;outline:none;transition:border-color .15s}
+    .pin-input:focus{border-color:var(--accent)}
+    .btn-login{width:100%;padding:.8rem;border-radius:12px;border:none;background:linear-gradient(135deg,#4f6ef7,#7c3aed);color:#fff;font-size:1rem;font-weight:700;cursor:pointer;transition:opacity .15s}
+    .btn-login:hover{opacity:.9}
+    .login-error{color:var(--red);font-size:.78rem;margin-top:.8rem;display:none}
+
+    /* ── HEADER ── */
+    header{background:linear-gradient(135deg,#1a1d27,#12142a);border-bottom:1px solid var(--border);padding:1rem 2rem;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50;flex-wrap:wrap;gap:.5rem}
+    .logo{display:flex;align-items:center;gap:.6rem}
+    .logo-text{font-size:1.3rem;font-weight:700;background:linear-gradient(90deg,#4f6ef7,#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+    .header-right{display:flex;align-items:center;gap:.7rem;flex-wrap:wrap}
+    .status-pill{display:flex;align-items:center;gap:.4rem;font-size:.72rem;color:var(--muted);background:var(--surface2);padding:.3rem .8rem;border-radius:20px;border:1px solid var(--border)}
+    .pulse{width:7px;height:7px;background:var(--green);border-radius:50%;animation:pulse 2s infinite;flex-shrink:0}
+    @keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(1.3)}}
+    .hbtn{padding:.4rem .9rem;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:.75rem;font-weight:600;cursor:pointer;transition:all .15s}
+    .hbtn:hover{border-color:var(--accent);color:var(--accent)}
+    .hbtn.yellow{border-color:var(--yellow);color:var(--yellow)}
+    .hbtn.yellow:hover{background:var(--yellow);color:#000}
+    .hbtn.green{border-color:var(--green);color:var(--green)}
+    .hbtn.green:hover{background:var(--green);color:#000}
+
+    /* ── MAIN ── */
+    main{max-width:1280px;margin:0 auto;padding:1.5rem}
+
+    /* ── SUMMARY ── */
+    .summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:.8rem;margin-bottom:1.5rem}
+    .sum-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1rem;text-align:center}
+    .sum-val{font-size:1.8rem;font-weight:700}
+    .sum-lbl{font-size:.65rem;color:var(--muted);margin-top:3px;text-transform:uppercase;letter-spacing:.05em}
+
+    /* ── FILTER BAR ── */
+    .filter-bar{display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:1.5rem;align-items:center}
+    .flabel{font-size:.7rem;color:var(--muted);margin-right:.2rem}
+    .fbtn{padding:.3rem .8rem;border-radius:20px;border:1px solid var(--border);background:var(--surface);color:var(--muted);font-size:.72rem;font-weight:600;cursor:pointer;transition:all .15s}
+    .fbtn:hover{border-color:var(--accent);color:var(--accent)}
+    .fbtn.active{background:var(--accent);border-color:var(--accent);color:#fff}
+    .fsep{width:1px;height:18px;background:var(--border);margin:0 .2rem}
+
+    /* ── SECTION TITLE ── */
+    .st{font-size:.72rem;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:.9rem;display:flex;align-items:center;gap:.5rem}
+    .st::after{content:'';flex:1;height:1px;background:var(--border)}
+
+    /* ── ROUTE CARDS ── */
+    .routes-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(355px,1fr));gap:1rem;margin-bottom:2rem}
+    .route-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:1.3rem;transition:all .2s;position:relative}
+    .route-card:hover{background:var(--hover);border-color:var(--accent);transform:translateY(-2px);box-shadow:0 8px 28px rgba(79,110,247,.14)}
+    .route-card.g{border-left:3px solid var(--green)}
+    .route-card.y{border-left:3px solid var(--yellow)}
+    .route-card.r{border-left:3px solid var(--red)}
+    .route-card.hidden{display:none}
+    .route-card.loading{opacity:.6;pointer-events:none}
+
+    .rh{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:.9rem}
+    .rapts{display:flex;align-items:center;gap:.5rem}
+    .acode{font-size:1.2rem;font-weight:700}
+    .aname{font-size:.65rem;color:var(--muted);margin-top:1px}
+    .atype{font-size:.58rem;padding:1px 5px;border-radius:4px;display:inline-block;margin-top:2px}
+    .nat-tag{background:rgba(79,110,247,.12);color:var(--accent)}
+    .int-tag{background:rgba(167,139,250,.12);color:#a78bfa}
+    .sbadge{padding:3px 9px;border-radius:20px;font-size:.65rem;font-weight:600;white-space:nowrap}
+    .bg{background:rgba(34,197,94,.12);color:var(--green)}
+    .by{background:rgba(245,158,11,.12);color:var(--yellow)}
+    .br{background:rgba(239,68,68,.12);color:var(--red)}
+
+    .prow{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:.7rem}
+    .pcurrent{font-size:1.55rem;font-weight:700;transition:color .3s}
+    .pcurrent.flash{animation:flash .7s}
+    @keyframes flash{0%,100%{}50%{color:var(--green)}}
+    .pmeta{text-align:right}
+    .ptarget{font-size:.65rem;color:var(--muted)}
+    .ptarget span{color:var(--text);font-weight:600}
+    .pdiff{font-size:.75rem;font-weight:600;margin-top:2px}
+    .dp{color:var(--red)} .dn{color:var(--green)}
+
+    .chart-wrap{height:42px;margin-bottom:.7rem}
+    .chart-wrap canvas{width:100%;height:42px}
+    .pbar{background:var(--surface2);border-radius:4px;height:4px;margin-bottom:.75rem;overflow:hidden}
+    .pfill{height:100%;border-radius:4px;transition:width .6s}
+    .fg{background:var(--green)} .fy{background:var(--yellow)} .fr{background:var(--red)}
+
+    .tabs{display:flex;border:1px solid var(--border);border-radius:7px;overflow:hidden;margin-bottom:.7rem}
+    .tab{flex:1;padding:.32rem .4rem;font-size:.65rem;font-weight:600;text-align:center;cursor:pointer;background:var(--surface2);color:var(--muted);transition:all .15s}
+    .tab.on{background:var(--accent);color:#fff}
+    .tc{display:none} .tc.on{display:block}
+
+    .rec-box{background:var(--surface2);border-radius:8px;padding:.55rem .75rem;font-size:.7rem;color:var(--muted);margin-bottom:.7rem}
+    .stats{display:flex;gap:.5rem;font-size:.65rem;color:var(--muted);margin-bottom:.7rem;flex-wrap:wrap}
+    .stats strong{color:var(--text)}
+
+    .miles-grid{display:grid;grid-template-columns:1fr 1fr;gap:.4rem;margin-bottom:.5rem}
+    .mi{background:var(--surface2);border-radius:8px;padding:.55rem .65rem}
+    .mi-prog{font-size:.6rem}
+    .mi-val{font-size:.9rem;font-weight:700;color:#a78bfa;margin:2px 0}
+    .mi-cash{font-size:.6rem;color:var(--muted)}
+    .mi-note{font-size:.62rem;color:var(--muted);background:var(--surface2);border-radius:6px;padding:.45rem .65rem;line-height:1.5}
+
+    .rfoot{display:flex;gap:.35rem;flex-wrap:wrap}
+    .rbtn{flex:1;min-width:72px;padding:.42rem .5rem;border:1px solid var(--border);border-radius:7px;background:var(--surface2);color:var(--text);font-size:.65rem;font-weight:600;text-decoration:none;text-align:center;transition:all .15s;cursor:pointer}
+    .rbtn:hover{background:var(--accent);border-color:var(--accent);color:#fff}
+    .rbtn.pri{background:var(--accent);border-color:var(--accent);color:#fff}
+    .rbtn.mil{background:rgba(167,139,250,.1);border-color:#7c3aed;color:#a78bfa}
+    .rbtn.mil:hover{background:#7c3aed;color:#fff}
+    .rbtn.alr{border-color:var(--yellow);color:var(--yellow)}
+    .rbtn.alr:hover{background:var(--yellow);color:#000}
+
+    /* ── SKELETON ── */
+    .skel{background:linear-gradient(90deg,var(--surface2) 25%,var(--surface3) 50%,var(--surface2) 75%);background-size:200% 100%;animation:shimmer 1.4s infinite;border-radius:8px}
+    @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+
+    /* ── FAMILY SECTION ── */
+    .family-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:.8rem;margin-bottom:2rem}
+    .fam-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1rem;display:flex;align-items:center;gap:.8rem;position:relative}
+    .fam-avatar{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#4f6ef7,#7c3aed);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.9rem;flex-shrink:0}
+    .fam-name{font-size:.85rem;font-weight:600}
+    .fam-email{font-size:.65rem;color:var(--muted)}
+    .fam-del{position:absolute;top:.6rem;right:.7rem;cursor:pointer;color:var(--muted);font-size:.75rem;transition:color .15s}
+    .fam-del:hover{color:var(--red)}
+    .fam-add{border:2px dashed var(--border);border-radius:12px;padding:1rem;display:flex;align-items:center;justify-content:center;gap:.5rem;cursor:pointer;font-size:.75rem;color:var(--muted);transition:all .15s}
+    .fam-add:hover{border-color:var(--accent);color:var(--accent)}
+
+    /* ── COUPONS ── */
+    .coupon-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:.8rem;margin-bottom:2rem}
+    .coupon-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1rem;display:flex;align-items:center;gap:.8rem}
+    .clogo{width:38px;height:38px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:.68rem;flex-shrink:0}
+    .gol{background:rgba(255,165,0,.1);color:#ffa500}
+    .azul{background:rgba(79,110,247,.1);color:var(--accent)}
+    .latam{background:rgba(239,68,68,.1);color:var(--red)}
+    .cinfo{flex:1;min-width:0}
+    .ccode{font-family:'Courier New',monospace;font-size:.82rem;font-weight:700;background:var(--surface2);padding:2px 7px;border-radius:5px;border:1px dashed var(--border);display:inline-block;margin-bottom:2px;cursor:pointer;transition:all .15s}
+    .ccode:hover{background:var(--accent);border-color:var(--accent);color:#fff}
+    .cdesc{font-size:.65rem;color:var(--muted)}
+    .cvalid{font-size:.6rem;margin-top:2px}
+    .vok{color:var(--green)} .vwarn{color:var(--yellow)}
+    .cbadge{padding:2px 7px;border-radius:10px;font-size:.6rem;font-weight:700;flex-shrink:0}
+    .cbok{background:rgba(34,197,94,.1);color:var(--green)}
+    .cbwarn{background:rgba(245,158,11,.1);color:var(--yellow)}
+
+    /* ── CALENDAR ── */
+    .cal-wrap{display:flex;gap:1.5rem;flex-wrap:wrap;margin-bottom:.8rem}
+    .cal-month{}
+    .mname{font-size:.75rem;font-weight:700;margin-bottom:.45rem}
+    .wdays{display:flex;gap:3px;margin-bottom:3px}
+    .wd{width:25px;text-align:center;font-size:.52rem;color:var(--muted);font-weight:700}
+    .wrow{display:flex;gap:3px;margin-bottom:3px}
+    .dc{width:25px;height:25px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:.58rem;font-weight:600;cursor:pointer;transition:transform .1s}
+    .dc:hover{transform:scale(1.2);z-index:5}
+    .cheap{background:rgba(34,197,94,.18);color:var(--green)}
+    .mid{background:rgba(245,158,11,.14);color:var(--yellow)}
+    .exp{background:rgba(239,68,68,.13);color:var(--red)}
+    .empty{background:transparent}
+    .cal-legend{display:flex;gap:1rem}
+    .leg{display:flex;align-items:center;gap:.35rem;font-size:.65rem;color:var(--muted)}
+    .ldot{width:9px;height:9px;border-radius:2px}
+
+    /* ── MODALS ── */
+    .overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s;backdrop-filter:blur(4px)}
+    .overlay.open{opacity:1;pointer-events:all}
+    .modal{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:1.8rem;max-width:480px;width:90%;max-height:90vh;overflow-y:auto}
+    .modal h2{font-size:1.05rem;margin-bottom:.3rem}
+    .modal-sub{font-size:.72rem;color:var(--muted);margin-bottom:1.2rem;line-height:1.6}
+    .fg{margin-bottom:.9rem}
+    .fg label{display:block;font-size:.68rem;font-weight:600;margin-bottom:.35rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+    .fg input,.fg select{width:100%;padding:.55rem .8rem;border-radius:9px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:.82rem;outline:none;transition:border-color .15s}
+    .fg input:focus,.fg select:focus{border-color:var(--accent)}
+    .frow{display:flex;gap:.7rem}
+    .frow .fg{flex:1}
+    .mactions{display:flex;gap:.7rem;margin-top:1.2rem}
+    .btn-p{flex:1;padding:.65rem;border-radius:9px;border:none;background:linear-gradient(135deg,#4f6ef7,#7c3aed);color:#fff;font-size:.82rem;font-weight:700;cursor:pointer}
+    .btn-p:hover{opacity:.9}
+    .btn-s{padding:.65rem 1.1rem;border-radius:9px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:.82rem;cursor:pointer}
+    .note-box{background:rgba(245,158,11,.07);border:1px solid rgba(245,158,11,.18);border-radius:9px;padding:.75rem .9rem;font-size:.7rem;color:var(--yellow);margin-bottom:.9rem;line-height:1.6}
+    .alerts-list{margin-top:1rem}
+    .ali{display:flex;justify-content:space-between;align-items:center;padding:.55rem .75rem;background:var(--surface2);border-radius:8px;margin-bottom:.4rem;font-size:.72rem}
+    .ali-del{cursor:pointer;color:var(--muted);transition:color .15s}
+    .ali-del:hover{color:var(--red)}
+
+    /* ── TIPS ── */
+    .tips-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:.8rem;margin-bottom:2rem}
+    .tip{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1rem}
+    .tico{font-size:1.2rem;margin-bottom:.3rem}
+    .titl{font-size:.78rem;font-weight:700;margin-bottom:.3rem}
+    .tibod{font-size:.68rem;color:var(--muted);line-height:1.6}
+    .tibod strong{color:var(--text)}
+
+    /* ── TOAST ── */
+    .toast{position:fixed;bottom:1.5rem;right:1.5rem;background:var(--surface);border:1px solid var(--accent);color:var(--text);padding:.65rem 1.1rem;border-radius:10px;font-size:.78rem;font-weight:600;opacity:0;transform:translateY(10px);transition:all .3s;z-index:999;pointer-events:none;max-width:280px}
+    .toast.show{opacity:1;transform:translateY(0)}
+
+    /* ── FOOTER ── */
+    footer{border-top:1px solid var(--border);padding:1.2rem 2rem;text-align:center;font-size:.65rem;color:var(--muted)}
+
+    /* ── CALENDAR PRICE GRID ── */
+    .cp-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:.8rem}
+    .cp-hdr{text-align:center;font-size:.58rem;font-weight:700;color:var(--muted);padding:3px 0}
+    .cp-cell{display:flex;flex-direction:column;align-items:center;padding:4px 2px;border-radius:6px;cursor:pointer;min-height:44px;transition:transform .12s,opacity .12s;border:1px solid transparent}
+    .cp-cell:hover{transform:scale(1.06);border-color:var(--accent)}
+    .cp-cell.empty{background:transparent;cursor:default;border:none}
+    .cp-cell.cheap{background:rgba(34,197,94,.15);color:var(--green)}
+    .cp-cell.mid{background:rgba(245,158,11,.13);color:var(--yellow)}
+    .cp-cell.exp{background:rgba(239,68,68,.12);color:var(--red)}
+    .cp-cell.nodata{background:var(--surface2);color:var(--muted);cursor:default}
+    .cp-day{font-size:.68rem;font-weight:700}
+    .cp-price{font-size:.58rem;font-weight:600;margin-top:1px}
+    .cal-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem}
+    .cal-nav-btn{background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:.3rem .7rem;cursor:pointer;font-size:.9rem;transition:all .15s}
+    .cal-nav-btn:hover{border-color:var(--accent);color:var(--accent)}
+    /* ── HISTORY CHART ── */
+    .hist-stats{display:flex;gap:.6rem;justify-content:center;flex-wrap:wrap;margin:.8rem 0}
+    .hstat{background:var(--surface2);border-radius:8px;padding:.5rem .9rem;text-align:center;min-width:80px}
+    .hstat-val{font-size:1rem;font-weight:700}
+    .hstat-lbl{font-size:.6rem;color:var(--muted);text-transform:uppercase;margin-top:2px}
+
+    @media(max-width:600px){
+      header{padding:.75rem 1rem}
+      main{padding:1rem}
+      .routes-grid{grid-template-columns:1fr}
+      .frow{flex-direction:column}
+    }
+  </style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-logo">✈️</div>
+    <div class="login-title">VooRadar Família</div>
+    <p class="login-sub">Digite o PIN de acesso da família</p>
+    <div class="pin-inputs">
+      <input class="pin-input" type="password" maxlength="1" inputmode="numeric" data-index="0" />
+      <input class="pin-input" type="password" maxlength="1" inputmode="numeric" data-index="1" />
+      <input class="pin-input" type="password" maxlength="1" inputmode="numeric" data-index="2" />
+      <input class="pin-input" type="password" maxlength="1" inputmode="numeric" data-index="3" />
+    </div>
+    <button class="btn-login" onclick="doLogin()">Entrar</button>
+    <p class="login-error" id="login-err">PIN incorreto. Tente novamente.</p>
+    <p style="font-size:.65rem;color:var(--muted);margin-top:1rem">PIN da família · 4 dígitos</p>
+  </div>
+</div>
+
+<!-- HEADER -->
+<header>
+  <div class="logo">
+    <span style="font-size:1.4rem">✈️</span>
+    <div class="logo-text">VooRadar</div>
+  </div>
+  <div class="header-right">
+    <div class="status-pill"><span class="pulse"></span><span id="status-txt">Carregando...</span></div>
+    <button class="hbtn" onclick="loadPrices()">⟳ Atualizar</button>
+    <button class="hbtn yellow" onclick="openModal('alert-modal')">🔔 Alertas</button>
+    <button class="hbtn green" onclick="openModal('family-modal')">👨‍👩‍👧 Família</button>
+  </div>
+</header>
+
+<main>
+
+  <!-- SUMMARY -->
+  <div class="summary-grid">
+    <div class="sum-card"><div class="sum-val" style="color:var(--green)" id="s-ok">—</div><div class="sum-lbl">Meta atingida</div></div>
+    <div class="sum-card"><div class="sum-val" style="color:var(--yellow)" id="s-close">—</div><div class="sum-lbl">Próximo</div></div>
+    <div class="sum-card"><div class="sum-val" style="color:var(--red)" id="s-high">—</div><div class="sum-lbl">Acima</div></div>
+    <div class="sum-card"><div class="sum-val" style="color:var(--accent)" id="s-routes">9</div><div class="sum-lbl">Rotas</div></div>
+    <div class="sum-card"><div class="sum-val" style="color:#a78bfa" id="s-alrt">0</div><div class="sum-lbl">Alertas</div></div>
+    <div class="sum-card"><div class="sum-val" style="color:var(--green)" id="s-fam">0</div><div class="sum-lbl">Membros</div></div>
+  </div>
+
+  <!-- FILTER BAR -->
+  <div class="filter-bar">
+    <span class="flabel">Filtrar:</span>
+    <button class="fbtn active" onclick="setFilter('all',this)">Todos</button>
+    <button class="fbtn" onclick="setFilter('domestic',this)">🌴 Nordeste</button>
+    <button class="fbtn" onclick="setFilter('international',this)">🌍 Internacional</button>
+    <div class="fsep"></div>
+    <button class="fbtn" onclick="setFilter('g',this)">🟢 Meta</button>
+    <button class="fbtn" onclick="setFilter('y',this)">🟡 Próximo</button>
+    <button class="fbtn" onclick="setFilter('r',this)">🔴 Alto</button>
+    <div class="fsep"></div>
+    <button class="fbtn" onclick="setFilter('aju',this)">Aracaju</button>
+    <button class="fbtn" onclick="setFilter('ssa',this)">Salvador</button>
+    <button class="fbtn" onclick="setFilter('rec',this)">Recife</button>
+    <button class="fbtn" onclick="setFilter('nat',this)">Natal</button>
+    <button class="fbtn" onclick="setFilter('eze',this)">Buenos Aires</button>
+    <button class="fbtn" onclick="setFilter('scl',this)">Santiago</button>
+    <button class="fbtn" onclick="setFilter('mad',this)">Madrid</button>
+    <button class="fbtn" onclick="setFilter('lis',this)">Lisboa</button>
+    <button class="fbtn" onclick="setFilter('ams',this)">Amsterdã</button>
+    <div class="fsep"></div>
+    <button class="fbtn" onclick="setFilter('direct',this)">✈ Direto</button>
+    <button class="fbtn" onclick="setFilter('withstops',this)">↪ Com escala</button>
+  </div>
+
+  <!-- ROUTES -->
+  <div class="st">Rotas Monitoradas <span style="font-size:.62rem;font-weight:400;margin-left:.4rem">São Paulo → Destino · Ida e volta 4–5 dias</span></div>
+  <div class="routes-grid" id="routes-grid">
+    <!-- Skeletons while loading -->
+    <div class="route-card" style="min-height:260px"><div class="skel" style="height:24px;width:60%;margin-bottom:12px"></div><div class="skel" style="height:36px;width:45%;margin-bottom:12px"></div><div class="skel" style="height:42px;margin-bottom:10px"></div><div class="skel" style="height:5px;margin-bottom:10px"></div><div class="skel" style="height:32px;margin-bottom:10px"></div><div class="skel" style="height:36px"></div></div>
+    <div class="route-card" style="min-height:260px"><div class="skel" style="height:24px;width:60%;margin-bottom:12px"></div><div class="skel" style="height:36px;width:45%;margin-bottom:12px"></div><div class="skel" style="height:42px;margin-bottom:10px"></div><div class="skel" style="height:5px;margin-bottom:10px"></div><div class="skel" style="height:32px;margin-bottom:10px"></div><div class="skel" style="height:36px"></div></div>
+    <div class="route-card" style="min-height:260px"><div class="skel" style="height:24px;width:60%;margin-bottom:12px"></div><div class="skel" style="height:36px;width:45%;margin-bottom:12px"></div><div class="skel" style="height:42px;margin-bottom:10px"></div><div class="skel" style="height:5px;margin-bottom:10px"></div><div class="skel" style="height:32px;margin-bottom:10px"></div><div class="skel" style="height:36px"></div></div>
+    <div class="route-card" style="min-height:260px"><div class="skel" style="height:24px;width:60%;margin-bottom:12px"></div><div class="skel" style="height:36px;width:45%;margin-bottom:12px"></div><div class="skel" style="height:42px;margin-bottom:10px"></div><div class="skel" style="height:5px;margin-bottom:10px"></div><div class="skel" style="height:32px;margin-bottom:10px"></div><div class="skel" style="height:36px"></div></div>
+    <div class="route-card" style="min-height:260px"><div class="skel" style="height:24px;width:60%;margin-bottom:12px"></div><div class="skel" style="height:36px;width:45%;margin-bottom:12px"></div><div class="skel" style="height:42px;margin-bottom:10px"></div><div class="skel" style="height:5px;margin-bottom:10px"></div><div class="skel" style="height:32px;margin-bottom:10px"></div><div class="skel" style="height:36px"></div></div>
+    <div class="route-card" style="min-height:260px"><div class="skel" style="height:24px;width:60%;margin-bottom:12px"></div><div class="skel" style="height:36px;width:45%;margin-bottom:12px"></div><div class="skel" style="height:42px;margin-bottom:10px"></div><div class="skel" style="height:5px;margin-bottom:10px"></div><div class="skel" style="height:32px;margin-bottom:10px"></div><div class="skel" style="height:36px"></div></div>
+  </div>
+
+  <!-- FAMILY SECTION -->
+  <div class="st">Membros da Família</div>
+  <div class="family-grid" id="family-grid">
+    <div class="fam-add" onclick="openModal('family-modal')">
+      <span style="font-size:1.3rem">+</span> Adicionar membro
+    </div>
+  </div>
+
+  <!-- CALENDAR -->
+  <div class="st">Melhores Dias para Voar (Jun–Ago 2026)</div>
+  <div id="cal-container" class="cal-wrap"></div>
+  <div class="cal-legend" style="margin-bottom:2rem">
+    <div class="leg"><div class="ldot" style="background:rgba(34,197,94,.4)"></div>Barato (ter/qua/sáb)</div>
+    <div class="leg"><div class="ldot" style="background:rgba(245,158,11,.3)"></div>Médio</div>
+    <div class="leg"><div class="ldot" style="background:rgba(239,68,68,.3)"></div>Caro (sex/dom)</div>
+  </div>
+
+  <!-- COUPONS -->
+  <div class="st">Cupons Verificados</div>
+  <div class="coupon-grid" id="coupons-grid"></div>
+
+  <!-- TIPS -->
+  <div class="st">Dicas de Compra</div>
+  <div class="tips-grid">
+    <div class="tip"><div class="tico">🕐</div><div class="titl">Melhor janela</div><div class="tibod">Compre entre <strong>45–60 dias</strong> antes. Abaixo de 14 dias sobe 40–70%.</div></div>
+    <div class="tip"><div class="tico">📅</div><div class="titl">Dias mais baratos</div><div class="tibod"><strong>Terça, quarta e sábado manhã</strong> — 15–25% mais barato que sexta e domingo.</div></div>
+    <div class="tip"><div class="tico">🛫</div><div class="titl">VCP é mais barato</div><div class="tibod"><strong>Viracopos (VCP)</strong> tem taxas menores. Azul opera de lá — frequentemente o mais barato para o Nordeste.</div></div>
+    <div class="tip"><div class="tico">🎒</div><div class="titl">Só bagagem de mão</div><div class="tibod">GOL e Azul cobram <strong>R$100–180/trecho</strong> para mala despachada no plano básico.</div></div>
+    <div class="tip"><div class="tico">✨</div><div class="titl">Milhas valem mais</div><div class="tibod">Use milhas em <strong>voos internacionais</strong> — valor médio de R$0,030/milha na econômica.</div></div>
+    <div class="tip"><div class="tico">🔔</div><div class="titl">Alertas automáticos</div><div class="tibod">Configure alertas acima — <strong>a cada hora</strong> o sistema verifica e envia <strong>e-mail real</strong> quando o preço cair.</div></div>
+  </div>
+
+</main>
+
+<footer>
+  VooRadar · Monitoramento via Travelpayouts · Compra direta nas companhias oficiais · Verificado a cada hora
+</footer>
+
+<!-- ALERT MODAL -->
+<div class="overlay" id="alert-modal" onclick="closeOutside(event,'alert-modal')">
+  <div class="modal">
+    <h2>🔔 Configurar Alerta de Preço</h2>
+    <p class="modal-sub">Quando o preço cair para sua meta, você recebe um e-mail real. Verificação automática a cada hora via Travelpayouts.</p>
+    <div class="note-box">⚙️ Alertas usam Resend (grátis) + Supabase. Configure as chaves no <strong>.env</strong> antes de fazer deploy. Veja o <strong>SETUP.md</strong> para instruções.</div>
+    <div class="fg"><label>Seu nome</label><input id="al-name" type="text" placeholder="ex: Rafael" /></div>
+    <div class="frow">
+      <div class="fg"><label>Seu e-mail</label><input id="al-email" type="email" placeholder="email@gmail.com" /></div>
+      <div class="fg"><label>Destino</label>
+        <select id="al-dest">
+          <option value="all">Todos os destinos</option>
+          <option value="aju">Aracaju (AJU)</option>
+          <option value="ssa">Salvador (SSA)</option>
+          <option value="rec">Recife (REC)</option>
+          <option value="nat">Natal (NAT)</option>
+          <option value="eze">Buenos Aires (EZE)</option>
+          <option value="scl">Santiago (SCL)</option>
+          <option value="mad">Madrid (MAD)</option>
+          <option value="lis">Lisboa (LIS)</option>
+          <option value="ams">Amsterdã (AMS)</option>
+        </select>
+      </div>
+    </div>
+    <div class="fg"><label>Preço máximo (R$) ida e volta</label><input id="al-price" type="number" placeholder="ex: 800" /></div>
+    <div class="mactions">
+      <button class="btn-p" onclick="saveAlert()">💾 Salvar Alerta</button>
+      <button class="btn-s" onclick="closeModal('alert-modal')">Cancelar</button>
+    </div>
+    <div class="alerts-list" id="alerts-list"></div>
+  </div>
+</div>
+
+<!-- FAMILY MODAL -->
+<div class="overlay" id="family-modal" onclick="closeOutside(event,'family-modal')">
+  <div class="modal">
+    <h2>👨‍👩‍👧 Gerenciar Família</h2>
+    <p class="modal-sub">Adicione os membros da família. Cada um pode ter alertas de preço vinculados ao seu e-mail.</p>
+    <div class="fg"><label>Nome</label><input id="fm-name" type="text" placeholder="ex: Maria" /></div>
+    <div class="fg"><label>E-mail</label><input id="fm-email" type="email" placeholder="maria@gmail.com" /></div>
+    <div class="mactions">
+      <button class="btn-p" onclick="saveFamilyMember()">➕ Adicionar</button>
+      <button class="btn-s" onclick="closeModal('family-modal')">Fechar</button>
+    </div>
+    <div class="alerts-list" id="family-list"></div>
+  </div>
+</div>
+
+<!-- CALENDAR MODAL -->
+<div class="overlay" id="cal-modal" onclick="closeOutside(event,'cal-modal')">
+  <div class="modal" style="max-width:500px">
+    <div class="cal-nav">
+      <button class="cal-nav-btn" onclick="calShiftMonth(-1)">‹</button>
+      <div>
+        <h2 id="cal-modal-title" style="font-size:.95rem;text-align:center">📅 Preços por Data</h2>
+        <p id="cal-modal-sub" style="font-size:.65rem;color:var(--muted);text-align:center;margin-top:2px"></p>
+      </div>
+      <button class="cal-nav-btn" onclick="calShiftMonth(1)">›</button>
+    </div>
+    <div id="cal-modal-loading" style="text-align:center;padding:2rem;color:var(--muted);font-size:.8rem">Carregando preços...</div>
+    <div id="cal-modal-grid" style="display:none">
+      <div class="cp-grid" id="cp-grid-inner"></div>
+      <div class="cal-legend" style="margin-top:.5rem">
+        <div class="leg"><div class="ldot" style="background:rgba(34,197,94,.4)"></div>Mais barato</div>
+        <div class="leg"><div class="ldot" style="background:rgba(245,158,11,.3)"></div>Médio</div>
+        <div class="leg"><div class="ldot" style="background:rgba(239,68,68,.3)"></div>Mais caro</div>
+      </div>
+      <p style="font-size:.62rem;color:var(--muted);margin-top:.6rem;text-align:center">Clique numa data para ir direto ao site oficial da companhia aérea (retorno +4 dias)</p>
+    </div>
+    <button class="btn-s" onclick="closeModal('cal-modal')" style="width:100%;margin-top:1rem">Fechar</button>
+  </div>
+</div>
+
+<!-- HISTORY MODAL -->
+<div class="overlay" id="hist-modal" onclick="closeOutside(event,'hist-modal')">
+  <div class="modal" style="max-width:560px">
+    <h2 id="hist-modal-title" style="margin-bottom:.3rem">📊 Histórico de Preços</h2>
+    <p id="hist-modal-sub" style="font-size:.7rem;color:var(--muted);margin-bottom:1rem"></p>
+    <canvas id="hist-chart" height="150" style="width:100%;border-radius:8px;background:var(--surface2)"></canvas>
+    <div class="hist-stats" id="hist-stats"></div>
+    <button class="btn-s" onclick="closeModal('hist-modal')" style="width:100%;margin-top:.5rem">Fechar</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── CONFIG ──
+const ROUTES_META = {
+  aju:{ toName:'Aracaju',      target:800,  type:'domestic',      low:382,  high:964,  smiles:18000, latam:16000, airline_hint:'Azul, GOL, LATAM', orig:'GRU', dest:'AJU', airlines:['azul','gol','latam'] },
+  ssa:{ toName:'Salvador',     target:800,  type:'domestic',      low:329,  high:1100, smiles:22000, latam:20000, airline_hint:'Azul, GOL, LATAM', orig:'VCP', dest:'SSA', airlines:['azul','gol','latam'] },
+  rec:{ toName:'Recife',       target:850,  type:'domestic',      low:412,  high:1200, smiles:23000, latam:21000, airline_hint:'Azul, GOL, LATAM', orig:'CGH', dest:'REC', airlines:['gol','azul','latam'] },
+  nat:{ toName:'Natal',        target:950,  type:'domestic',      low:281,  high:1950, smiles:26000, latam:24000, airline_hint:'GOL, LATAM, Azul', orig:'GRU', dest:'NAT', airlines:['gol','latam','azul'] },
+  eze:{ toName:'Buenos Aires', target:1200, type:'international', low:600,  high:2000, smiles:35000, latam:30000, airline_hint:'LATAM, GOL',       orig:'GRU', dest:'EZE', airlines:['latam','gol'] },
+  scl:{ toName:'Santiago',     target:1100, type:'international', low:900,  high:2300, smiles:38000, latam:32000, airline_hint:'LATAM, JetSMART',   orig:'GRU', dest:'SCL', airlines:['latam'] },
+  mad:{ toName:'Madrid',       target:3500, type:'international', low:2800, high:6000, smiles:70000, latam:60000, airline_hint:'LATAM, Iberia, TAP', orig:'GRU', dest:'MAD', airlines:['latam','iberia','tap'] },
+  lis:{ toName:'Lisboa',       target:3200, type:'international', low:2500, high:5800, smiles:65000, latam:55000, airline_hint:'TAP, LATAM',         orig:'GRU', dest:'LIS', airlines:['tap','latam'] },
+  ams:{ toName:'Amsterdã',     target:4000, type:'international', low:3200, high:7000, smiles:80000, latam:70000, airline_hint:'KLM, LATAM',         orig:'GRU', dest:'AMS', airlines:['klm','latam'] },
+};
+
+// Google Flights — abre com busca pré-preenchida por companhia e rota
+// Ao clicar no resultado, o usuário vai direto para o site oficial da companhia
+const AIRLINE_LABEL_GF = { gol:'GOL', azul:'Azul', latam:'LATAM', tap:'TAP', klm:'KLM', iberia:'Iberia' };
+
+function googleFlightsUrl(airline, o, d, dep, ret) {
+  const label = AIRLINE_LABEL_GF[airline] || airline;
+  // q= com companhia + aeroportos + datas → Google Flights pré-preenche e filtra
+  const q = encodeURIComponent(`${label} ${o} ${d} ${dep} ${ret}`);
+  return `https://www.google.com/travel/flights?q=${q}&hl=pt-BR&curr=BRL`;
+}
+
+const AIRLINE_URL = {
+  gol:    (o,d,dep,ret) => googleFlightsUrl('gol',    o, d, dep, ret),
+  azul:   (o,d,dep,ret) => googleFlightsUrl('azul',   o, d, dep, ret),
+  latam:  (o,d,dep,ret) => googleFlightsUrl('latam',  o, d, dep, ret),
+  tap:    (o,d,dep,ret) => googleFlightsUrl('tap',    o, d, dep, ret),
+  klm:    (o,d,dep,ret) => googleFlightsUrl('klm',    o, d, dep, ret),
+  iberia: (o,d,dep,ret) => googleFlightsUrl('iberia', o, d, dep, ret),
+};
+const AIRLINE_LABEL = { gol:'GOL', azul:'Azul', latam:'LATAM', tap:'TAP', klm:'KLM', iberia:'Iberia' };
+
+// Mapeamento código IATA → chave interna
+const IATA_MAP = {
+  G3:'gol', AD:'azul', LA:'latam', JJ:'latam',
+  TP:'tap',  KL:'klm',  IB:'iberia', AR:'latam',
+};
+
+function buildAirlineButtons(id) {
+  const meta  = ROUTES_META[id];
+  const fd    = FLIGHT_DATES[id];
+  const dep   = fd?.dep || nextTuesdayStr(2);
+  const ret   = fd?.ret || nextTuesdayStr(3);
+  const price = DEMO_PRICES[id];
+  const dep2  = dep.slice(5).split('-').reverse().join('/');
+  const ret2  = ret.slice(5).split('-').reverse().join('/');
+
+  // Companhia que tem o preço monitorado (vem da API)
+  const cheapestKey = fd?.airline ? (IATA_MAP[fd.airline] || null) : null;
+
+  const { orig, dest, airlines } = meta;
+  return airlines.map(a => {
+    const url       = AIRLINE_URL[a]?.(orig, dest, dep, ret) || '#';
+    const isCheap   = a === cheapestKey;
+    const cls       = isCheap ? 'pri' : '';
+    const priceTag  = isCheap && price ? ` · R$${price.toLocaleString('pt-BR')}` : '';
+    const label     = AIRLINE_LABEL[a] + (isCheap ? ' ★' : '');
+    const tooltip   = `Google Flights: ${AIRLINE_LABEL[a]}${isCheap ? ' (preço do dashboard'+priceTag+')' : ''} · Ida ${dep2} · Volta ${ret2}`;
+    return `<a class="rbtn ${cls}" href="${url}" target="_blank" title="${tooltip}">${label}</a>`;
+  }).join('');
+}
+
+// Gera link para o calendário (usa primeira companhia da rota)
+function calAirlineUrl(routeId, dep, ret) {
+  const meta = ROUTES_META[routeId];
+  const a = meta.airlines[0];
+  return AIRLINE_URL[a]?.(meta.orig, meta.dest, dep, ret) || '#';
+}
+
+function nextTuesdayStr(offsetWeeks = 0) {
+  const d = new Date();
+  const days = (2 - d.getDay() + 7) % 7 || 7;
+  d.setDate(d.getDate() + days + offsetWeeks * 7);
+  return d.toISOString().split('T')[0];
+};
+
+const DEMO_PRICES = { aju:446, ssa:893, rec:896, nat:1050, eze:1229, scl:1211, mad:3100, lis:2800, ams:3600 };
+const DEMO_HISTORY = {
+  aju:[820,760,690,620,540,480,446], ssa:[1050,980,910,870,895,893,893],
+  rec:[1100,1050,980,930,910,900,896], nat:[1400,1300,1200,1150,1100,1070,1050],
+  eze:[1600,1500,1400,1350,1300,1250,1229], scl:[1800,1650,1500,1400,1300,1250,1211],
+  mad:[5200,4800,4500,4000,3800,3400,3100], lis:[4900,4500,4200,3800,3500,3100,2800],
+  ams:[6000,5600,5200,4800,4500,4100,3600]
+};
+
+const COUPONS = [
+  { a:'GOL', lc:'gol', code:'SEMANAGOLPP', desc:'12% off passagens nacionais', valid:'Voos: 05/05–02/06 e 08/06–23/06/2026', vc:'vok', st:'✅ Ativo', bc:'cbok' },
+  { a:'GOL', lc:'gol', code:'GOL25ANOSPP', desc:'15% off nacionais e internacionais', valid:'Verificar validade antes de usar', vc:'vwarn', st:'⚠️ Verificar', bc:'cbwarn' },
+  { a:'AZUL', lc:'azul', code:'SEM CÓDIGO', desc:'Promoções diretas a partir de R$57 no site Azul', valid:'voeazul.com.br/ofertas', vc:'vok', st:'✅ Ativo', bc:'cbok' },
+  { a:'LATAM', lc:'latam', code:'LATAM PASS', desc:'Resgate de milhas pelo programa fidelidade', valid:'latampass.latam.com/ofertas', vc:'vok', st:'✅ Ativo', bc:'cbok' },
+];
+
+// ── STATE ──
+let priceState = {};
+let alerts = JSON.parse(localStorage.getItem('vr_alerts') || '[]');
+let familyMembers = JSON.parse(localStorage.getItem('vr_family') || '[]');
+let isLoggedIn = sessionStorage.getItem('vr_auth') === '1';
+let refreshInterval;
+let FLIGHT_DATES = {}; // { aju: { dep:'2026-06-17', ret:'2026-06-21', airline:'G3' } }
+
+// ── LOGIN ──
+(function() {
+  const inputs = document.querySelectorAll('.pin-input');
+  inputs.forEach((inp, i) => {
+    inp.addEventListener('input', () => {
+      if (inp.value && i < inputs.length - 1) inputs[i+1].focus();
+      if (inputs[inputs.length-1].value) doLogin();
+    });
+    inp.addEventListener('keydown', e => {
+      if (e.key === 'Backspace' && !inp.value && i > 0) inputs[i-1].focus();
+    });
+  });
+  if (isLoggedIn) { document.getElementById('login-screen').style.display = 'none'; init(); }
+})();
+
+async function doLogin() {
+  const pin = [...document.querySelectorAll('.pin-input')].map(i=>i.value).join('');
+  if (pin.length < 4) return;
+  // PIN verificado localmente (servidor não necessário)
+  const VALID_PIN = '2550';
+  if (pin === VALID_PIN) {
+    sessionStorage.setItem('vr_auth','1');
+    document.getElementById('login-screen').style.display = 'none';
+    init();
+    return;
+  }
+  document.getElementById('login-err').style.display = 'block';
+  document.querySelectorAll('.pin-input').forEach(i => { i.value=''; });
+  document.querySelectorAll('.pin-input')[0].focus();
+}
+
+// ── INIT ──
+function init() {
+  renderCoupons();
+  renderCalendar();
+  renderFamilyGrid();
+  updateSummary();
+  loadPrices();
+  // Auto-refresh every 5 min
+  clearInterval(refreshInterval);
+  refreshInterval = setInterval(() => {
+    loadPrices(true);
+  }, 5 * 60 * 1000);
+  // Countdown display
+  let cd = 300;
+  const tick = setInterval(() => {
+    cd--;
+    if (cd <= 0) { cd = 300; }
+    const m = Math.floor(cd/60), s = cd%60;
+    document.getElementById('status-txt').textContent = `Próx. atualização: ${m}:${s.toString().padStart(2,'0')}`;
+  }, 1000);
+}
+
+// ── SUPABASE CONFIG (anon key é público por design) ──
+const SB_URL  = 'https://lvjkilmgrxbrwrnrqvvw.supabase.co';
+const SB_ANON = 'sb_publishable_SZeAYd3moZAxIpZJywkKeg_5pSsD5Ep';
+
+// ── LOAD PRICES — lê direto do Supabase, sem backend ──
+async function loadPrices(silent = false) {
+  renderRoutes(); // mostra demo imediatamente
+  if (!silent) showToast('⟳ Buscando preços reais...');
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 15000);
+
+    // Busca os 300 registros mais recentes (cobre todo histórico relevante)
+    const res = await fetch(
+      `${SB_URL}/rest/v1/price_history?select=route_id,price_brl,airline,dep_date,ret_date,checked_at&order=checked_at.desc&limit=300`,
+      { signal: controller.signal, headers: { apikey: SB_ANON, Authorization: `Bearer ${SB_ANON}` } }
+    );
+    clearTimeout(timer);
+    if (!res.ok) throw new Error('Supabase error ' + res.status);
+
+    const rows = await res.json();
+    if (!Array.isArray(rows) || !rows.length) throw new Error('sem dados');
+
+    // Agrupa por rota: pega o mais recente + constrói histórico
+    const byRoute = {};
+    rows.forEach(r => {
+      if (!byRoute[r.route_id]) byRoute[r.route_id] = [];
+      byRoute[r.route_id].push(r);
+    });
+
+    let updated = 0;
+    Object.entries(byRoute).forEach(([id, records]) => {
+      // Registros já vêm em desc — o primeiro é o mais recente
+      const latest = records[0];
+      const checkedAt = new Date(latest.checked_at);
+
+      DEMO_PRICES[id] = latest.price_brl;
+
+      // Histórico em ordem cronológica (reverso do desc)
+      const hist = records.map(r => r.price_brl).reverse();
+      if (hist.length >= 2) DEMO_HISTORY[id] = hist;
+
+      FLIGHT_DATES[id] = {
+        dep: latest.dep_date,
+        ret: latest.ret_date,
+        airline: latest.airline,
+        checkedAt,
+      };
+      updated++;
+    });
+
+    renderRoutes();
+    const ago = (() => {
+      const last = rows[0]?.checked_at ? new Date(rows[0].checked_at) : null;
+      if (!last) return '';
+      const mins = Math.round((Date.now() - last) / 60000);
+      return mins < 60 ? ` · há ${mins} min` : ` · há ${Math.round(mins/60)}h`;
+    })();
+    showToast(`✅ ${updated} rotas atualizadas${ago}`);
+  } catch(e) {
+    if (!silent) showToast('ℹ️ Usando dados de demonstração');
+  }
+}
+
+// ── RENDER ROUTES ──
+function renderRoutes() {
+  const grid = document.getElementById('routes-grid');
+  grid.innerHTML = '';
+  Object.entries(ROUTES_META).forEach(([id, meta]) => {
+    const price = DEMO_PRICES[id] || meta.low;
+    const history = DEMO_HISTORY[id] || [price];
+    const diff = price - meta.target;
+    const status = price <= meta.target ? 'g' : price <= meta.target * 1.15 ? 'y' : 'r';
+    const badgeText = status==='g'?'🟢 Meta atingida':status==='y'?'🟡 Próximo':'🔴 Acima';
+    const badgeCls = status==='g'?'bg':status==='y'?'by':'br';
+    const fillCls = status==='g'?'fg':status==='y'?'fy':'fr';
+    const prog = Math.min(100, Math.round((meta.target/price)*100));
+    const diffStr = diff>0 ? `<span class="dp">+R$${diff} acima</span>` : `<span class="dn">−R$${Math.abs(diff)} ✓</span>`;
+    const recTxt = status==='g' ? `🟢 Meta atingida! Compre agora — R$${price}.`
+                  : status==='y' ? `🟡 R$${diff} acima da meta. Monitorando tendência de queda.`
+                  : `🔴 R$${diff} acima da meta. Aguardar queda.`;
+    const typeLabel = meta.type==='domestic'?'Nacional':'Internacional';
+    const typeCls = meta.type==='domestic'?'nat-tag':'int-tag';
+    const cpm = (price / meta.smiles).toFixed(3);
+    const milesOk = parseFloat(cpm) < 0.025;
+
+    grid.innerHTML += `
+    <div class="route-card ${status}" id="card-${id}" data-id="${id}" data-type="${meta.type}" data-status="${status}" data-stops="">
+      <div class="rh">
+        <div class="rapts">
+          <div>
+            <div class="acode">${meta.orig}</div>
+            <div class="aname">São Paulo</div>
+            <span class="atype ${typeCls}">${typeLabel}</span>
+          </div>
+          <div style="color:var(--muted);font-size:.85rem;padding:0 .3rem">⇄</div>
+          <div>
+            <div class="acode">${id.toUpperCase()}</div>
+            <div class="aname">${meta.toName}</div>
+          </div>
+        </div>
+        <span class="sbadge ${badgeCls}">${badgeText}</span>
+      </div>
+
+      <div style="display:flex;gap:.4rem;margin-bottom:.7rem;flex-wrap:wrap">
+        <span style="font-size:.62rem;background:rgba(79,110,247,.12);color:var(--accent);padding:2px 8px;border-radius:10px;font-weight:600">🔄 Ida e volta</span>
+        <span style="font-size:.62rem;background:rgba(34,197,94,.1);color:var(--green);padding:2px 8px;border-radius:10px;font-weight:600">📅 4–5 dias</span>
+        <span id="dates-${id}" style="font-size:.62rem;background:var(--surface2);color:var(--muted);padding:2px 8px;border-radius:10px"></span>
+        <span id="checked-${id}" style="font-size:.62rem;background:rgba(255,180,0,.1);color:#f59e0b;padding:2px 8px;border-radius:10px"></span>
+      </div>
+
+      <div class="prow">
+        <div>
+          <div class="pcurrent" id="price-${id}">R$ ${price.toLocaleString('pt-BR')}</div>
+          <div style="font-size:.62rem;color:var(--muted);margin-top:1px">preço total ida e volta · <span id="airline-${id}" style="color:var(--accent);font-weight:700"></span></div>
+        </div>
+        <div class="pmeta">
+          <div class="ptarget">Meta i/v: <span>R$ ${meta.target.toLocaleString('pt-BR')}</span></div>
+          <div class="pdiff">${diffStr}</div>
+        </div>
+      </div>
+
+      <div class="chart-wrap"><canvas id="chart-${id}" height="42"></canvas></div>
+      <div class="pbar"><div class="pfill ${fillCls}" style="width:${prog}%" id="prog-${id}"></div></div>
+
+      <div class="tabs">
+        <div class="tab on" onclick="switchTab('${id}','info',this)">📊 Info</div>
+        <div class="tab" onclick="switchTab('${id}','miles',this)">✨ Milhas</div>
+      </div>
+
+      <div id="tc-info-${id}" class="tc on">
+        <div class="rec-box">${recTxt}</div>
+        <div class="stats">
+          <span>📉 Mín: <strong style="color:var(--green)">R$${meta.low}</strong></span>
+          <span>📈 Máx: <strong style="color:var(--red)">R$${meta.high}</strong></span>
+          <span>✈️ ${(() => { const fd=FLIGHT_DATES[id]; const k=fd?.airline?IATA_MAP[fd.airline]:null; const lbl=k?AIRLINE_LABEL[k]:null; return lbl ? `<strong style="color:var(--accent)">${lbl}</strong> tem o preço` : meta.airline_hint; })()}</span>
+        </div>
+      </div>
+
+      <div id="tc-miles-${id}" class="tc">
+        <div class="miles-grid">
+          <div class="mi">
+            <div class="mi-prog" style="color:#ffa500">Smiles (GOL)</div>
+            <div class="mi-val">${meta.smiles.toLocaleString('pt-BR')} mi</div>
+            <div class="mi-cash">≈ ${(meta.smiles*0.025).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}</div>
+          </div>
+          <div class="mi">
+            <div class="mi-prog" style="color:var(--red)">LATAM Pass</div>
+            <div class="mi-val">${meta.latam.toLocaleString('pt-BR')} mi</div>
+            <div class="mi-cash">≈ ${(meta.latam*0.025).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}</div>
+          </div>
+        </div>
+        <div class="mi-note">${milesOk ? '✨ Milhas podem valer a pena nesta rota.' : '💡 Vale mais pagar em dinheiro agora.'} Custo atual: <strong>R$${cpm}/milha</strong>. Ideal: &lt;R$0,025.</div>
+      </div>
+
+      <div class="rfoot">
+        ${buildAirlineButtons(id)}
+        <a class="rbtn mil" href="https://www.smiles.com.br/home" target="_blank" title="Buscar com milhas Smiles">Smiles</a>
+        <button class="rbtn" onclick="openCalendar('${id}')" title="Comparar preços por data">📅</button>
+        <button class="rbtn" onclick="openHistory('${id}')" title="Histórico de preços">📊</button>
+        <button class="rbtn alr" onclick="openAlertForRoute('${id}',${meta.target})">🔔</button>
+      </div>
+      <div style="font-size:.6rem;color:var(--muted);margin-top:.3rem;padding:0 .25rem">
+        ⚠️ Preços mudam em tempo real. Clique na companhia aérea para ver o valor atual no site oficial.
+      </div>
+    </div>`;
+  });
+
+  // Draw charts
+  Object.keys(ROUTES_META).forEach(id => {
+    const history = DEMO_HISTORY[id] || [DEMO_PRICES[id]];
+    const meta = ROUTES_META[id];
+    const price = DEMO_PRICES[id] || meta.low;
+    const status = price <= meta.target ? 'g' : price <= meta.target*1.15 ? 'y' : 'r';
+    drawChart(id, history, meta.target, status);
+    // Datas de ida e volta
+    const el = document.getElementById(`dates-${id}`);
+    if (el) {
+      const d = FLIGHT_DATES[id];
+      if (d?.dep) {
+        const fmt = s => s.split('-').reverse().slice(0,2).join('/');
+        el.textContent = `✈ ${fmt(d.dep)} → ${fmt(d.ret)}`;
+      } else {
+        el.textContent = '✈ próxima ter → sáb';
+      }
+    }
+    // Mostra companhia que tem o preço — ao lado do valor
+    const ael = document.getElementById(`airline-${id}`);
+    if (ael) {
+      const fd = FLIGHT_DATES[id];
+      const key = fd?.airline ? IATA_MAP[fd.airline] : null;
+      const name = key ? AIRLINE_LABEL[key] : null;
+      ael.textContent = name ? `via ${name}` : '';
+    }
+    const cel = document.getElementById(`checked-${id}`);
+    if (cel) {
+      const d = FLIGHT_DATES[id];
+      if (d?.checkedAt) {
+        const time = d.checkedAt.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+        cel.textContent = `⏱ verificado às ${time}`;
+        cel.title = 'Preços mudam em tempo real — clique na companhia para ver o valor atual';
+      } else {
+        cel.textContent = '⏱ dados de demonstração';
+      }
+    }
+  });
+  updateSummary();
+  applyCurrentFilter();
+}
+
+// ── SPARKLINE ──
+function drawChart(id, history, target, status) {
+  const c = document.getElementById(`chart-${id}`);
+  if (!c) return;
+  const ctx = c.getContext('2d');
+  c.width = c.offsetWidth || 320; c.height = 42;
+  const W=c.width, H=c.height;
+  const mn=Math.min(...history)*0.93, mx=Math.max(...history)*1.04;
+  const pts = history.map((v,i)=>({ x:(i/(history.length-1))*W, y:H-((v-mn)/(mx-mn))*(H-5)-2 }));
+  ctx.clearRect(0,0,W,H);
+  const ty = H-((target-mn)/(mx-mn))*(H-5)-2;
+  ctx.setLineDash([3,3]);
+  ctx.strokeStyle = status==='g'?'#22c55e':status==='y'?'#f59e0b':'#ef4444';
+  ctx.lineWidth=1; ctx.globalAlpha=.45;
+  ctx.beginPath(); ctx.moveTo(0,ty); ctx.lineTo(W,ty); ctx.stroke();
+  ctx.setLineDash([]); ctx.globalAlpha=1;
+  const g=ctx.createLinearGradient(0,0,0,H);
+  g.addColorStop(0,'rgba(79,110,247,.22)'); g.addColorStop(1,'rgba(79,110,247,0)');
+  ctx.fillStyle=g;
+  ctx.beginPath(); ctx.moveTo(pts[0].x,H);
+  pts.forEach(p=>ctx.lineTo(p.x,p.y));
+  ctx.lineTo(pts[pts.length-1].x,H); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle='#4f6ef7'; ctx.lineWidth=2; ctx.lineJoin='round';
+  ctx.beginPath(); pts.forEach((p,i)=>i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y)); ctx.stroke();
+  const last=pts[pts.length-1];
+  ctx.fillStyle=status==='g'?'#22c55e':status==='y'?'#f59e0b':'#ef4444';
+  ctx.beginPath(); ctx.arc(last.x,last.y,4,0,Math.PI*2); ctx.fill();
+}
+
+// ── TABS ──
+function switchTab(id, tab, el) {
+  ['info','miles'].forEach(t => {
+    document.getElementById(`tc-${t}-${id}`)?.classList.remove('on');
+  });
+  document.getElementById(`tc-${tab}-${id}`)?.classList.add('on');
+  el.closest('.tabs').querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
+  el.classList.add('on');
+}
+
+// ── FILTER ──
+let currentFilter = 'all';
+function setFilter(f, btn) {
+  currentFilter = f;
+  document.querySelectorAll('.fbtn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  applyCurrentFilter();
+}
+function applyCurrentFilter() {
+  document.querySelectorAll('.route-card').forEach(card => {
+    const id=card.dataset.id, type=card.dataset.type, st=card.dataset.status, stops=card.dataset.stops;
+    let show;
+    if (currentFilter === 'direct')    show = stops === '0';
+    else if (currentFilter === 'withstops') show = stops !== '' && stops !== '0';
+    else show = currentFilter==='all' || currentFilter===id || currentFilter===type || currentFilter===st;
+    card.classList.toggle('hidden', !show);
+  });
+}
+
+// ── SUMMARY ──
+function updateSummary() {
+  const vals = Object.entries(ROUTES_META).map(([id,meta])=>({
+    status: DEMO_PRICES[id]<=meta.target ? 'g' : DEMO_PRICES[id]<=meta.target*1.15 ? 'y' : 'r'
+  }));
+  document.getElementById('s-ok').textContent = vals.filter(v=>v.status==='g').length;
+  document.getElementById('s-close').textContent = vals.filter(v=>v.status==='y').length;
+  document.getElementById('s-high').textContent = vals.filter(v=>v.status==='r').length;
+  document.getElementById('s-routes').textContent = Object.keys(ROUTES_META).length;
+  document.getElementById('s-alrt').textContent = alerts.length;
+  document.getElementById('s-fam').textContent = familyMembers.length;
+}
+
+// ── ALERTS ──
+function openAlertForRoute(id, price) {
+  document.getElementById('al-dest').value = id;
+  document.getElementById('al-price').value = price;
+  openModal('alert-modal');
+}
+
+async function saveAlert() {
+  const name = document.getElementById('al-name').value.trim();
+  const email = document.getElementById('al-email').value.trim();
+  const dest = document.getElementById('al-dest').value;
+  const price = parseInt(document.getElementById('al-price').value);
+  if (!name) { showToast('⚠️ Informe seu nome'); return; }
+  if (!email || !email.includes('@')) { showToast('⚠️ E-mail inválido'); return; }
+  if (!price || price < 100) { showToast('⚠️ Preço inválido'); return; }
+  const destLabel = dest==='all' ? 'Todos' : ROUTES_META[dest]?.toName || dest.toUpperCase();
+  const alert = { id:Date.now(), name, email, dest, price, destLabel, createdAt:new Date().toLocaleDateString('pt-BR'), sbId:null };
+  alerts.push(alert);
+  localStorage.setItem('vr_alerts', JSON.stringify(alerts));
+  try {
+    const res = await fetch('/.netlify/functions/alerts?resource=alerts', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ name, email, route_id:dest, target_price:price })
+    });
+    const [saved] = await res.json();
+    if (saved?.id) { alert.sbId = saved.id; localStorage.setItem('vr_alerts', JSON.stringify(alerts)); }
+  } catch(e) { /* offline/demo mode */ }
+  updateSummary();
+  renderAlertsList();
+  showToast(`🔔 Alerta criado: ${destLabel} < R$${price}`);
+}
+
+async function deleteAlert(id) {
+  const a = alerts.find(x=>x.id===id);
+  alerts = alerts.filter(x=>x.id!==id);
+  localStorage.setItem('vr_alerts', JSON.stringify(alerts));
+  if (a?.sbId) {
+    try {
+      await fetch(`/.netlify/functions/alerts?resource=alerts&id=${a.sbId}`, { method:'DELETE' });
+    } catch(e) {}
+  }
+  updateSummary();
+  renderAlertsList();
+  showToast('🗑️ Alerta removido');
+}
+
+function renderAlertsList() {
+  const list = document.getElementById('alerts-list');
+  if (!alerts.length) { list.innerHTML='<p style="font-size:.7rem;color:var(--muted);margin-top:.8rem;text-align:center">Nenhum alerta criado ainda.</p>'; return; }
+  list.innerHTML = `<div style="font-size:.68rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin:.9rem 0 .5rem">Alertas Ativos (${alerts.length})</div>` +
+    alerts.map(a=>`<div class="ali"><span>🔔 <strong>${a.destLabel}</strong> &lt; R$${a.price} · ${a.email}</span><span class="ali-del" onclick="deleteAlert(${a.id})">✕</span></div>`).join('');
+}
+
+// ── FAMILY ──
+async function saveFamilyMember() {
+  const name = document.getElementById('fm-name').value.trim();
+  const email = document.getElementById('fm-email').value.trim();
+  if (!name || !email.includes('@')) { showToast('⚠️ Preencha nome e e-mail'); return; }
+  if (familyMembers.find(m=>m.email===email)) { showToast('⚠️ E-mail já cadastrado'); return; }
+  const member = { id:Date.now(), name, email };
+  familyMembers.push(member);
+  localStorage.setItem('vr_family', JSON.stringify(familyMembers));
+  try {
+    await fetch('/.netlify/functions/alerts?resource=family_members', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ name, email })
+    });
+  } catch(e) {}
+  document.getElementById('fm-name').value=''; document.getElementById('fm-email').value='';
+  updateSummary(); renderFamilyGrid(); renderFamilyList();
+  showToast(`✅ ${name} adicionado(a) à família!`);
+}
+
+function deleteFamilyMember(id) {
+  const m = familyMembers.find(x=>x.id===id);
+  familyMembers = familyMembers.filter(x=>x.id!==id);
+  localStorage.setItem('vr_family', JSON.stringify(familyMembers));
+  updateSummary(); renderFamilyGrid(); renderFamilyList();
+}
+
+function getInitials(name) { return name.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase(); }
+
+function renderFamilyGrid() {
+  const grid = document.getElementById('family-grid');
+  const cards = familyMembers.map(m=>`
+    <div class="fam-card">
+      <div class="fam-avatar">${getInitials(m.name)}</div>
+      <div><div class="fam-name">${m.name}</div><div class="fam-email">${m.email}</div></div>
+      <span class="fam-del" onclick="deleteFamilyMember(${m.id})">✕</span>
+    </div>`).join('');
+  grid.innerHTML = cards + `<div class="fam-add" onclick="openModal('family-modal')"><span style="font-size:1.3rem">+</span> Adicionar membro</div>`;
+}
+
+function renderFamilyList() {
+  const list = document.getElementById('family-list');
+  if (!list) return;
+  if (!familyMembers.length) { list.innerHTML='<p style="font-size:.7rem;color:var(--muted);text-align:center;margin-top:.8rem">Nenhum membro adicionado ainda.</p>'; return; }
+  list.innerHTML = `<div style="font-size:.68rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin:.9rem 0 .5rem">Membros (${familyMembers.length})</div>` +
+    familyMembers.map(m=>`<div class="ali"><span>👤 <strong>${m.name}</strong> · ${m.email}</span><span class="ali-del" onclick="deleteFamilyMember(${m.id})">✕</span></div>`).join('');
+}
+
+// ── CALENDAR ──
+function renderCalendar() {
+  const months = [
+    { name:'Junho 2026', days:30, startDay:1 },
+    { name:'Julho 2026', days:31, startDay:3 },
+    { name:'Agosto 2026', days:31, startDay:6 },
+  ];
+  const cheap=[2,3,6], exp=[0,5];
+  const container = document.getElementById('cal-container');
+  container.innerHTML = '';
+  months.forEach(m => {
+    let html = `<div class="cal-month"><div class="mname">${m.name}</div>`;
+    html += '<div class="wdays">';
+    ['D','S','T','Q','Q','S','S'].forEach(d=>html+=`<div class="wd">${d}</div>`);
+    html += '</div>';
+    let cells = new Array(m.startDay).fill(null);
+    for(let d=1;d<=m.days;d++) cells.push(d);
+    while(cells.length%7!==0) cells.push(null);
+    for(let i=0;i<cells.length;i+=7) {
+      html += '<div class="wrow">';
+      for(let j=0;j<7;j++) {
+        const d=cells[i+j];
+        if(!d){html+='<div class="dc empty"></div>';continue;}
+        const dow=(m.startDay+d-1)%7;
+        const cls=cheap.includes(dow)?'cheap':exp.includes(dow)?'exp':'mid';
+        html+=`<div class="dc ${cls}">${d}</div>`;
+      }
+      html+='</div>';
+    }
+    html+='</div>';
+    const div=document.createElement('div'); div.innerHTML=html;
+    container.appendChild(div.firstChild);
+  });
+}
+
+// ── COUPONS ──
+function renderCoupons() {
+  document.getElementById('coupons-grid').innerHTML = COUPONS.map(c=>`
+    <div class="coupon-card">
+      <div class="clogo ${c.lc}">${c.a}</div>
+      <div class="cinfo">
+        <div class="ccode" onclick="copyCode('${c.code}',this)">${c.code}</div>
+        <div class="cdesc">${c.desc}</div>
+        <div class="cvalid ${c.vc}">📅 ${c.valid}</div>
+      </div>
+      <span class="cbadge ${c.bc}">${c.st}</span>
+    </div>`).join('');
+}
+
+function copyCode(code,el) {
+  if(code==='SEM CÓDIGO'||code==='LATAM PASS'){showToast('Acesse o site diretamente');return;}
+  navigator.clipboard.writeText(code).then(()=>{
+    const orig=el.textContent; el.textContent='✓ Copiado!';
+    setTimeout(()=>el.textContent=orig,2000);
+    showToast(`✅ Cupom ${code} copiado!`);
+  });
+}
+
+// ── MODALS ──
+function openModal(id) {
+  document.getElementById(id).classList.add('open');
+  if(id==='alert-modal') renderAlertsList();
+  if(id==='family-modal') renderFamilyList();
+}
+function closeModal(id) { document.getElementById(id)?.classList.remove('open'); }
+function closeOutside(e,id) { if(e.target.id===id) closeModal(id); }
+
+// ── TOAST ──
+let toastT;
+function showToast(msg, dur=2800) {
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  clearTimeout(toastT);
+  toastT=setTimeout(()=>t.classList.remove('show'),dur);
+}
+
+// ── CALENDAR COMPARATOR ──
+let calRoute = null, calYear = 0, calMonth = 0, calCache = {};
+
+function openCalendar(id) {
+  calRoute = id;
+  const now = new Date();
+  calYear = now.getFullYear(); calMonth = now.getMonth() + 1;
+  document.getElementById('cal-modal-sub').textContent = ROUTES_META[id]?.toName || id;
+  openModal('cal-modal');
+  fetchCalendar();
+}
+
+function calShiftMonth(dir) {
+  calMonth += dir;
+  if (calMonth > 12) { calMonth = 1; calYear++; }
+  if (calMonth < 1)  { calMonth = 12; calYear--; }
+  fetchCalendar();
+}
+
+async function fetchCalendar() {
+  const monthStr = `${calYear}-${String(calMonth).padStart(2,'0')}`;
+  const cacheKey = `${calRoute}:${monthStr}`;
+  document.getElementById('cal-modal-loading').style.display = 'block';
+  document.getElementById('cal-modal-grid').style.display = 'none';
+  document.getElementById('cal-modal-title').textContent = `📅 ${new Date(calYear, calMonth-1).toLocaleDateString('pt-BR',{month:'long',year:'numeric'})}`;
+
+  if (!calCache[cacheKey]) {
+    try {
+      const res = await fetch(`/.netlify/functions/calendar?route=${calRoute}&month=${monthStr}`);
+      const json = await res.json();
+      calCache[cacheKey] = json.ok ? json.prices : {};
+    } catch(e) { calCache[cacheKey] = {}; }
+  }
+  renderCalendarGrid(calCache[cacheKey], calYear, calMonth);
+}
+
+function renderCalendarGrid(prices, year, month) {
+  const vals = Object.values(prices).filter(Boolean);
+  const median = vals.length ? vals.sort((a,b)=>a-b)[Math.floor(vals.length/2)] : 0;
+
+  const firstDay = new Date(year, month-1, 1).getDay();
+  const daysInMonth = new Date(year, month, 0).getDate();
+  const meta = ROUTES_META[calRoute];
+
+  let html = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb']
+    .map(d=>`<div class="cp-hdr">${d}</div>`).join('');
+
+  for (let i = 0; i < firstDay; i++) html += `<div class="cp-cell empty"></div>`;
+
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateStr = `${year}-${String(month).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const p = prices[dateStr];
+    const today = new Date(); today.setHours(0,0,0,0);
+    const isPast = new Date(dateStr) < today;
+    if (isPast) { html += `<div class="cp-cell empty" style="opacity:.25"><span class="cp-day">${d}</span></div>`; continue; }
+    if (!p) { html += `<div class="cp-cell nodata"><span class="cp-day">${d}</span><span class="cp-price">—</span></div>`; continue; }
+    const cls = p < median*0.85 ? 'cheap' : p > median*1.15 ? 'exp' : 'mid';
+    const retDate = new Date(dateStr); retDate.setDate(retDate.getDate()+4);
+    const ret = retDate.toISOString().split('T')[0];
+    const ddmm = s => { const [,m,dy]=s.split('-'); return `${dy}${m}`; };
+    const url = meta ? calAirlineUrl(calRoute, dateStr, ret) : '#';
+    html += `<div class="cp-cell ${cls}" onclick="window.open('${url}','_blank')" title="Ida ${dateStr} · Volta ${ret}">
+      <span class="cp-day">${d}</span>
+      <span class="cp-price">R$${p.toLocaleString('pt-BR')}</span>
+    </div>`;
+  }
+
+  document.getElementById('cp-grid-inner').innerHTML = html;
+  document.getElementById('cal-modal-loading').style.display = 'none';
+  document.getElementById('cal-modal-grid').style.display = 'block';
+}
+
+// ── HISTORY ──
+function openHistory(id) {
+  const meta = ROUTES_META[id];
+  const history = DEMO_HISTORY[id] || [DEMO_PRICES[id] || meta.low];
+  document.getElementById('hist-modal-title').textContent = `📊 ${meta.toName} — Histórico`;
+  document.getElementById('hist-modal-sub').textContent =
+    `${meta.orig} → ${meta.dest} · últimas ${history.length} verificações`;
+  openModal('hist-modal');
+  setTimeout(() => drawHistoryChart(id, history, meta.target), 50);
+}
+
+function drawHistoryChart(id, history, target) {
+  const c = document.getElementById('hist-chart');
+  if (!c) return;
+  c.width = c.offsetWidth || 500; c.height = 150;
+  const ctx = c.getContext('2d');
+  const W = c.width, H = c.height;
+  const pl = 52, pr = 12, pt = 14, pb = 22;
+  const iW = W - pl - pr, iH = H - pt - pb;
+
+  const mn = Math.min(...history, target) * 0.93;
+  const mx = Math.max(...history, target) * 1.05;
+  const px = i => pl + (i / Math.max(history.length-1,1)) * iW;
+  const py = v => pt + iH - ((v-mn)/(mx-mn)) * iH;
+
+  ctx.clearRect(0,0,W,H);
+
+  // grid lines
+  ctx.strokeStyle = 'rgba(255,255,255,.05)'; ctx.lineWidth = 1;
+  [0,.25,.5,.75,1].forEach(t => {
+    const y = pt + t * iH;
+    ctx.beginPath(); ctx.moveTo(pl, y); ctx.lineTo(W-pr, y); ctx.stroke();
+  });
+
+  // target line
+  ctx.setLineDash([5,4]); ctx.strokeStyle = '#22c55e'; ctx.lineWidth = 1.5; ctx.globalAlpha = .6;
+  ctx.beginPath(); ctx.moveTo(pl, py(target)); ctx.lineTo(W-pr, py(target)); ctx.stroke();
+  ctx.setLineDash([]); ctx.globalAlpha = 1;
+
+  // area fill
+  const grad = ctx.createLinearGradient(0,pt,0,pt+iH);
+  grad.addColorStop(0,'rgba(79,110,247,.28)'); grad.addColorStop(1,'rgba(79,110,247,0)');
+  ctx.fillStyle = grad;
+  ctx.beginPath(); ctx.moveTo(px(0), pt+iH);
+  history.forEach((v,i) => ctx.lineTo(px(i), py(v)));
+  ctx.lineTo(px(history.length-1), pt+iH); ctx.closePath(); ctx.fill();
+
+  // line
+  ctx.strokeStyle = '#4f6ef7'; ctx.lineWidth = 2;
+  ctx.beginPath(); history.forEach((v,i) => i===0?ctx.moveTo(px(i),py(v)):ctx.lineTo(px(i),py(v))); ctx.stroke();
+
+  // y-axis labels
+  ctx.fillStyle = '#64748b'; ctx.font = '10px sans-serif'; ctx.textAlign = 'right';
+  [mn, (mn+mx)/2, mx].forEach(v => ctx.fillText(`R$${Math.round(v/10)*10}`, pl-4, py(v)+3));
+
+  // x-axis labels
+  ctx.textAlign = 'center';
+  const step = Math.max(1, Math.floor(history.length/5));
+  history.forEach((v,i) => {
+    if (i % step === 0 || i === history.length-1)
+      ctx.fillText(`#${i+1}`, px(i), H-pb+14);
+  });
+
+  // last dot
+  const lastV = history[history.length-1];
+  const st = lastV <= target ? '#22c55e' : lastV <= target*1.15 ? '#f59e0b' : '#ef4444';
+  ctx.fillStyle = st;
+  ctx.beginPath(); ctx.arc(px(history.length-1), py(lastV), 5, 0, Math.PI*2); ctx.fill();
+
+  // stats
+  const avg = Math.round(history.reduce((a,b)=>a+b,0)/history.length);
+  const minP = Math.min(...history), maxP = Math.max(...history);
+  const trend = history.length > 1 ? history[history.length-1] - history[0] : 0;
+  const trendStr = trend < 0 ? `↓ R$${Math.abs(trend)} queda` : trend > 0 ? `↑ R$${trend} alta` : '→ estável';
+  const trendColor = trend < 0 ? 'var(--green)' : trend > 0 ? 'var(--red)' : 'var(--muted)';
+  document.getElementById('hist-stats').innerHTML = [
+    { val:`R$${minP.toLocaleString('pt-BR')}`, lbl:'Mínimo', color:'var(--green)' },
+    { val:`R$${maxP.toLocaleString('pt-BR')}`, lbl:'Máximo', color:'var(--red)' },
+    { val:`R$${avg.toLocaleString('pt-BR')}`, lbl:'Média', color:'var(--accent)' },
+    { val:trendStr, lbl:'Tendência', color:trendColor },
+  ].map(s=>`<div class="hstat"><div class="hstat-val" style="color:${s.color}">${s.val}</div><div class="hstat-lbl">${s.lbl}</div></div>`).join('');
+}
+
+// ── RESIZE ──
+window.addEventListener('resize',()=>{
+  Object.keys(ROUTES_META).forEach(id=>{
+    const meta=ROUTES_META[id], price=DEMO_PRICES[id]||meta.low;
+    const st=price<=meta.target?'g':price<=meta.target*1.15?'y':'r';
+    drawChart(id,DEMO_HISTORY[id]||[price],meta.target,st);
+  });
+});
+</script>
+</body>
+</html>
