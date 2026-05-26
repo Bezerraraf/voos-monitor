@@ -234,11 +234,16 @@
     .hstat-lbl{font-size:.6rem;color:var(--muted);text-transform:uppercase;margin-top:2px}
 
     /* ── MONTH SELECTOR ── */
-    .month-bar{display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:1rem;align-items:center}
+    .month-bar{display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:.5rem;align-items:center}
     .mbtn{padding:.35rem .9rem;border-radius:20px;border:1px solid var(--border);background:var(--surface);color:var(--muted);font-size:.75rem;font-weight:600;cursor:pointer;transition:all .15s}
     .mbtn:hover{border-color:var(--accent);color:var(--accent)}
     .mbtn.active{background:var(--accent);border-color:var(--accent);color:#fff}
     .mbtn.nodata{opacity:.35;cursor:default}
+    .days-bar{display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:1rem;align-items:center}
+    .dbtn{padding:.3rem .75rem;border-radius:20px;border:1px solid var(--border);background:var(--surface);color:var(--muted);font-size:.72rem;font-weight:600;cursor:pointer;transition:all .15s}
+    .dbtn:hover{border-color:#f59e0b;color:#f59e0b}
+    .dbtn.active{background:#f59e0b;border-color:#f59e0b;color:#000}
+    .flabel{font-size:.7rem;color:var(--muted);font-weight:600;white-space:nowrap;padding:.2rem .1rem}
 
     @media(max-width:600px){
       header{padding:.75rem 1rem}
@@ -322,8 +327,18 @@
   <!-- MONTH SELECTOR -->
   <div class="month-bar" id="month-bar"></div>
 
+  <!-- DAYS SELECTOR -->
+  <div class="days-bar" id="days-bar">
+    <span class="flabel">Duração:</span>
+    <button class="dbtn" onclick="selectTripDays(3,this)">3 dias</button>
+    <button class="dbtn active" onclick="selectTripDays(5,this)">5 dias</button>
+    <button class="dbtn" onclick="selectTripDays(7,this)">7 dias</button>
+    <button class="dbtn" onclick="selectTripDays(10,this)">10 dias</button>
+    <button class="dbtn" onclick="selectTripDays(14,this)">14 dias</button>
+  </div>
+
   <!-- ROUTES -->
-  <div class="st">Rotas Monitoradas <span style="font-size:.62rem;font-weight:400;margin-left:.4rem">São Paulo → Destino · Ida e volta 4–5 dias</span></div>
+  <div class="st">Rotas Monitoradas <span style="font-size:.62rem;font-weight:400;margin-left:.4rem">São Paulo → Destino · Ida e volta · <span id="trip-days-label">5 dias</span></span></div>
   <div class="routes-grid" id="routes-grid">
     <!-- Skeletons while loading -->
     <div class="route-card" style="min-height:260px"><div class="skel" style="height:24px;width:60%;margin-bottom:12px"></div><div class="skel" style="height:36px;width:45%;margin-bottom:12px"></div><div class="skel" style="height:42px;margin-bottom:10px"></div><div class="skel" style="height:5px;margin-bottom:10px"></div><div class="skel" style="height:32px;margin-bottom:10px"></div><div class="skel" style="height:36px"></div></div>
@@ -499,11 +514,18 @@ const IATA_MAP = {
   TP:'tap',  KL:'klm',  IB:'iberia', AR:'latam',
 };
 
+function addDaysToDate(dateStr, days) {
+  const d = new Date(dateStr + 'T12:00:00');
+  d.setDate(d.getDate() + days);
+  return d.toISOString().split('T')[0];
+}
+
 function buildAirlineButtons(id) {
   const meta  = ROUTES_META[id];
   const fd    = FLIGHT_DATES[id];
   const dep   = fd?.dep || nextTuesdayStr(2);
-  const ret   = fd?.ret || nextTuesdayStr(3);
+  // Usa tripDays para calcular volta a partir da partida
+  const ret   = addDaysToDate(dep, tripDays);
   const price = DEMO_PRICES[id];
   const dep2  = dep.slice(5).split('-').reverse().join('/');
   const ret2  = ret.slice(5).split('-').reverse().join('/');
@@ -562,6 +584,7 @@ let refreshInterval;
 let FLIGHT_DATES = {}; // { aju: { dep:'2026-06-17', ret:'2026-06-21', airline:'G3' } }
 let PRICES_BY_MONTH = {};   // { 'YYYY-MM': { aju:{price,airline,dep,ret,history}, ... } }
 let selectedMonth = '';     // 'YYYY-MM' currently shown
+let tripDays = 5;           // duração da viagem em dias (ida+volta)
 
 // ── LOGIN ──
 (function() {
@@ -641,6 +664,15 @@ function selectMonth(month, btn) {
     if (d.history?.length) DEMO_HISTORY[id] = d.history;
     FLIGHT_DATES[id] = { dep: d.dep, ret: d.ret, airline: d.airline, checkedAt: d.checkedAt };
   });
+  renderRoutes();
+}
+
+function selectTripDays(days, btn) {
+  tripDays = days;
+  document.querySelectorAll('.dbtn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  const lbl = document.getElementById('trip-days-label');
+  if (lbl) lbl.textContent = `${days} dias`;
   renderRoutes();
 }
 
@@ -766,7 +798,7 @@ function renderRoutes() {
 
       <div style="display:flex;gap:.4rem;margin-bottom:.7rem;flex-wrap:wrap">
         <span style="font-size:.62rem;background:rgba(79,110,247,.12);color:var(--accent);padding:2px 8px;border-radius:10px;font-weight:600">🔄 Ida e volta</span>
-        <span style="font-size:.62rem;background:rgba(34,197,94,.1);color:var(--green);padding:2px 8px;border-radius:10px;font-weight:600">📅 4–5 dias</span>
+        <span style="font-size:.62rem;background:rgba(34,197,94,.1);color:var(--green);padding:2px 8px;border-radius:10px;font-weight:600">📅 ${tripDays} dias</span>
         <span id="dates-${id}" style="font-size:.62rem;background:var(--surface2);color:var(--muted);padding:2px 8px;border-radius:10px"></span>
         <span id="checked-${id}" style="font-size:.62rem;background:rgba(255,180,0,.1);color:#f59e0b;padding:2px 8px;border-radius:10px"></span>
       </div>
@@ -1175,7 +1207,7 @@ function renderCalendarGrid(prices, year, month) {
     if (isPast) { html += `<div class="cp-cell empty" style="opacity:.25"><span class="cp-day">${d}</span></div>`; continue; }
     if (!p) { html += `<div class="cp-cell nodata"><span class="cp-day">${d}</span><span class="cp-price">—</span></div>`; continue; }
     const cls = p < median*0.85 ? 'cheap' : p > median*1.15 ? 'exp' : 'mid';
-    const retDate = new Date(dateStr); retDate.setDate(retDate.getDate()+4);
+    const retDate = new Date(dateStr); retDate.setDate(retDate.getDate()+tripDays);
     const ret = retDate.toISOString().split('T')[0];
     const ddmm = s => { const [,m,dy]=s.split('-'); return `${dy}${m}`; };
     const url = meta ? calAirlineUrl(calRoute, dateStr, ret) : '#';
