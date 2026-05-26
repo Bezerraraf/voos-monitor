@@ -233,6 +233,13 @@
     .hstat-val{font-size:1rem;font-weight:700}
     .hstat-lbl{font-size:.6rem;color:var(--muted);text-transform:uppercase;margin-top:2px}
 
+    /* ── MONTH SELECTOR ── */
+    .month-bar{display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:1rem;align-items:center}
+    .mbtn{padding:.35rem .9rem;border-radius:20px;border:1px solid var(--border);background:var(--surface);color:var(--muted);font-size:.75rem;font-weight:600;cursor:pointer;transition:all .15s}
+    .mbtn:hover{border-color:var(--accent);color:var(--accent)}
+    .mbtn.active{background:var(--accent);border-color:var(--accent);color:#fff}
+    .mbtn.nodata{opacity:.35;cursor:default}
+
     @media(max-width:600px){
       header{padding:.75rem 1rem}
       main{padding:1rem}
@@ -311,6 +318,9 @@
     <button class="fbtn" onclick="setFilter('direct',this)">✈ Direto</button>
     <button class="fbtn" onclick="setFilter('withstops',this)">↪ Com escala</button>
   </div>
+
+  <!-- MONTH SELECTOR -->
+  <div class="month-bar" id="month-bar"></div>
 
   <!-- ROUTES -->
   <div class="st">Rotas Monitoradas <span style="font-size:.62rem;font-weight:400;margin-left:.4rem">São Paulo → Destino · Ida e volta 4–5 dias</span></div>
@@ -550,6 +560,8 @@ let familyMembers = JSON.parse(localStorage.getItem('vr_family') || '[]');
 let isLoggedIn = sessionStorage.getItem('vr_auth') === '1';
 let refreshInterval;
 let FLIGHT_DATES = {}; // { aju: { dep:'2026-06-17', ret:'2026-06-21', airline:'G3' } }
+let PRICES_BY_MONTH = {};   // { 'YYYY-MM': { aju:{price,airline,dep,ret,history}, ... } }
+let selectedMonth = '';     // 'YYYY-MM' currently shown
 
 // ── LOGIN ──
 (function() {
@@ -604,21 +616,48 @@ function init() {
   }, 1000);
 }
 
+// ── MONTH BAR ──
+function buildMonthBar() {
+  const bar = document.getElementById('month-bar');
+  if (!bar) return;
+  const months = Object.keys(PRICES_BY_MONTH).sort();
+  if (!months.length) { bar.innerHTML = ''; return; }
+  const names = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  bar.innerHTML = '<span class="flabel">Mês:</span>' + months.map(m => {
+    const [y, mo] = m.split('-');
+    const label = `${names[parseInt(mo)-1]} ${y.slice(2)}`;
+    const active = m === selectedMonth ? 'active' : '';
+    return `<button class="mbtn ${active}" onclick="selectMonth('${m}',this)">${label}</button>`;
+  }).join('');
+}
+
+function selectMonth(month, btn) {
+  selectedMonth = month;
+  document.querySelectorAll('.mbtn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  const data = PRICES_BY_MONTH[month] || {};
+  Object.entries(data).forEach(([id, d]) => {
+    DEMO_PRICES[id] = d.price;
+    if (d.history?.length) DEMO_HISTORY[id] = d.history;
+    FLIGHT_DATES[id] = { dep: d.dep, ret: d.ret, airline: d.airline, checkedAt: d.checkedAt };
+  });
+  renderRoutes();
+}
+
 // ── SUPABASE CONFIG (anon key é público por design) ──
 const SB_URL  = 'https://lvjkilmgrxbrwrnrqvvw.supabase.co';
 const SB_ANON = 'sb_publishable_SZeAYd3moZAxIpZJywkKeg_5pSsD5Ep';
 
 // ── LOAD PRICES — lê direto do Supabase, sem backend ──
 async function loadPrices(silent = false) {
-  renderRoutes(); // mostra demo imediatamente
-  if (!silent) showToast('⟳ Buscando preços reais...');
+  renderRoutes();
+  if (!silent) showToast('⟳ Buscando preços...');
   try {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 15000);
 
-    // Busca os 300 registros mais recentes (cobre todo histórico relevante)
     const res = await fetch(
-      `${SB_URL}/rest/v1/price_history?select=route_id,price_brl,airline,dep_date,ret_date,checked_at&order=checked_at.desc&limit=300`,
+      `${SB_URL}/rest/v1/price_history?select=route_id,price_brl,airline,dep_date,ret_date,checked_at&order=checked_at.desc&limit=500`,
       { signal: controller.signal, headers: { apikey: SB_ANON, Authorization: `Bearer ${SB_ANON}` } }
     );
     clearTimeout(timer);
@@ -627,42 +666,59 @@ async function loadPrices(silent = false) {
     const rows = await res.json();
     if (!Array.isArray(rows) || !rows.length) throw new Error('sem dados');
 
-    // Agrupa por rota: pega o mais recente + constrói histórico
-    const byRoute = {};
+    // Agrupa por mês e rota
+    // estrutura: PRICES_BY_MONTH['2026-06']['aju'] = { price, airline, dep, ret, history:[], checkedAt }
+    const byMonthRoute = {};
+    const histAcc = {}; // 'YYYY-MM|route' → [prices in order]
+
+    // rows are desc by checked_at — process all
     rows.forEach(r => {
-      if (!byRoute[r.route_id]) byRoute[r.route_id] = [];
-      byRoute[r.route_id].push(r);
+      const month = r.dep_date ? r.dep_date.slice(0,7) : null;
+      if (!month) return;
+      const key = `${month}|${r.route_id}`;
+      if (!histAcc[key]) histAcc[key] = [];
+      histAcc[key].push(r.price_brl);
+      if (!byMonthRoute[month]) byMonthRoute[month] = {};
+      if (!byMonthRoute[month][r.route_id]) {
+        // First (most recent) entry per month/route
+        byMonthRoute[month][r.route_id] = {
+          price: r.price_brl,
+          airline: r.airline,
+          dep: r.dep_date,
+          ret: r.ret_date,
+          checkedAt: new Date(r.checked_at),
+          history: [],
+        };
+      }
     });
 
-    let updated = 0;
-    Object.entries(byRoute).forEach(([id, records]) => {
-      // Registros já vêm em desc — o primeiro é o mais recente
-      const latest = records[0];
-      const checkedAt = new Date(latest.checked_at);
-
-      DEMO_PRICES[id] = latest.price_brl;
-
-      // Histórico em ordem cronológica (reverso do desc)
-      const hist = records.map(r => r.price_brl).reverse();
-      if (hist.length >= 2) DEMO_HISTORY[id] = hist;
-
-      FLIGHT_DATES[id] = {
-        dep: latest.dep_date,
-        ret: latest.ret_date,
-        airline: latest.airline,
-        checkedAt,
-      };
-      updated++;
+    // Attach histories (reverse = chronological order)
+    Object.entries(histAcc).forEach(([key, prices]) => {
+      const [month, rid] = key.split('|');
+      if (byMonthRoute[month]?.[rid]) {
+        byMonthRoute[month][rid].history = [...prices].reverse();
+      }
     });
 
-    renderRoutes();
+    PRICES_BY_MONTH = byMonthRoute;
+
+    // Auto-select month: prefer latest available month
+    const months = Object.keys(PRICES_BY_MONTH).sort();
+    if (!selectedMonth || !PRICES_BY_MONTH[selectedMonth]) {
+      selectedMonth = months[months.length - 1] || '';
+    }
+
+    buildMonthBar();
+    selectMonth(selectedMonth, null);
+
     const ago = (() => {
       const last = rows[0]?.checked_at ? new Date(rows[0].checked_at) : null;
       if (!last) return '';
       const mins = Math.round((Date.now() - last) / 60000);
       return mins < 60 ? ` · há ${mins} min` : ` · há ${Math.round(mins/60)}h`;
     })();
-    showToast(`✅ ${updated} rotas atualizadas${ago}`);
+    const nMonths = months.length;
+    showToast(`✅ ${nMonths} mes${nMonths>1?'es':''} de dados carregados${ago}`);
   } catch(e) {
     if (!silent) showToast('ℹ️ Usando dados de demonstração');
   }
