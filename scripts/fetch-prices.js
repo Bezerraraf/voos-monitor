@@ -67,6 +67,8 @@ async function fetchCheapest(origin, dest, month) {
 async function upsertPrice(routeId, flight) {
   const row = {
     route_id:   routeId,
+    origin:     flight.origin,
+    destination: flight.destination,
     price_brl:  flight.price_brl,
     airline:    flight.airline,
     dep_date:   flight.dep_date,
@@ -113,6 +115,8 @@ async function main() {
           continue;
         }
 
+        flight.origin      = origin;
+        flight.destination = dest;
         await upsertPrice(routeId, flight);
         console.log(`  [${month}] ${routeId}: R$${flight.price_brl} (${flight.airline}) ${flight.dep_date} → ${flight.ret_date}`);
         saved++;
